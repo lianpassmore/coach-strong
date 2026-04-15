@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Bebas_Neue, Nunito, Ubuntu } from "next/font/google";
 import "./globals.css";
-import InstallPrompt from "@/components/InstallPrompt"; //
+import InstallPrompt from "@/components/InstallPrompt";
 
 const bebasNeue = Bebas_Neue({
   weight: '400',
@@ -15,18 +15,18 @@ const nunito = Nunito({
 });
 
 const ubuntu = Ubuntu({
-  weight:['400', '500', '700'],
+  weight: ['400', '500', '700'],
   subsets: ["latin"],
   variable: '--font-ubuntu',
 });
 
-// This forces the phone's top status bar and prevents annoying zooming on inputs
 export const viewport: Viewport = {
   themeColor: "#110c94",
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, 
+  maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -37,17 +37,11 @@ export const metadata: Metadata = {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Coach Strong",
-    // Tells iPhones to use your new Canva Splash Screen
-    startupImage:[
-      {
-        url: "/splash-screen.png",
-      },
-    ],
+    startupImage: [{ url: "/splash-screen.png" }],
   },
   icons: {
     icon: "/icon-192.png",
-    // Forces iOS to use the high-res 512px icon you made
-    apple: "/icon-512.png", 
+    apple: "/icon-512.png",
   },
 };
 
@@ -57,11 +51,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${bebasNeue.variable} ${nunito.variable} ${ubuntu.variable}`}>
-      <body className="font-sans bg-brand-sand text-brand-dark antialiased">
-        {children}
-        
-        {/* ADD THE PROMPT HERE */}
+    <html 
+      lang="en" 
+      className={`${bebasNeue.variable} ${nunito.variable} ${ubuntu.variable} h-full select-none`}
+    >
+      <body 
+        className="font-sans bg-brand-sand text-brand-dark antialiased h-full overflow-x-hidden"
+        style={{ 
+          overscrollBehaviorY: 'none', 
+          WebkitTapHighlightColor: 'transparent' 
+        } as React.CSSProperties}
+      >
+        <div className="flex flex-col min-h-full safe-top safe-bottom">
+          {children}
+        </div>
         <InstallPrompt />
       </body>
     </html>

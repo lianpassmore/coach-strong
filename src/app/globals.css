@@ -14,3 +14,24 @@
   --font-heading: var(--font-bebas-neue), sans-serif;
   --font-sans: var(--font-nunito), sans-serif;
 }
+
+/* These handle the iPhone Notch and Home Bar areas */
+@layer base {
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Makes the app feel more responsive on mobile touch */
+button, a {
+  touch-action: manipulation;
+}
+
+/* Ensures text is still selectable in inputs and journals */
+input, textarea, [contenteditable="true"] {
+  user-select: text !important;
+  -webkit-user-select: text !important;
+}

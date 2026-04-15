@@ -1,7 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Loader2, Search, BookOpen, X } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect, useMemo } from "react";
+import { Loader2, Search, BookOpen, X, ChevronDown, Sparkles, Library } from "lucide-react";import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
 import HomeButton from "@/components/HomeButton";
 
@@ -32,110 +31,135 @@ export default function ResourcesPage() {
       setLoading(false);
     }
     load();
-  }, [supabase]);
+  }, []);
 
-  const filtered = query.trim()
-    ? cards.filter((c) =>
-        [c.title, c.category, c.content].some((f) =>
-          f.toLowerCase().includes(query.toLowerCase())
-        )
+  const filtered = useMemo(() => {
+    if (!query.trim()) return cards;
+    return cards.filter((c) =>
+      [c.title, c.category, c.content].some((f) =>
+        f.toLowerCase().includes(query.toLowerCase())
       )
-    : cards;
+    );
+  }, [query, cards]);
 
   // Group by category
-  const groups = filtered.reduce<Record<string, Card[]>>((acc, card) => {
-    (acc[card.category] ??= []).push(card);
-    return acc;
-  }, {});
+  const groups = useMemo(() => {
+    return filtered.reduce<Record<string, Card[]>>((acc, card) => {
+      (acc[card.category] ??= []).push(card);
+      return acc;
+    }, {});
+  }, [filtered]);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-brand-sand flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-light" />
-      </main>
-    );
-  }
+  if (loading) return (
+    <div className="min-h-screen bg-brand-sand flex items-center justify-center">
+      <Loader2 className="w-8 h-8 animate-spin text-brand-light" />
+    </div>
+  );
 
   return (
-    <main className="min-h-screen bg-brand-sand pb-24 font-sans text-brand-dark">
-      <header className="bg-linear-to-b from-brand-dark to-[#1a15a3] text-white pt-14 pb-20 px-6 rounded-b-4xl shadow-[0_10px_30px_rgba(17,12,148,0.15)] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-mid/30 rounded-full blur-[80px] pointer-events-none"></div>
-        <div className="relative z-10 flex justify-between items-start">
-          <div>
-            <HomeButton />
-            <p className="text-brand-light font-bold text-xs uppercase tracking-[0.2em] mb-1 mt-3">Quick lookup</p>
-            <h1 className="font-heading text-4xl tracking-wider">REFERENCE CARDS</h1>
+    <main className="min-h-screen bg-brand-sand pb-24 text-brand-dark overflow-x-hidden">
+      
+      {/* HEADER: The Knowledge Vault */}
+      <header className="bg-brand-dark text-white pt-12 pb-14 px-6 rounded-b-[2.5rem] shadow-xl relative">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-mid/10 rounded-full blur-[60px]" />
+        <div className="relative z-10">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-4">
+              <HomeButton />
+              <div>
+                 <h1 className="font-heading text-3xl tracking-wider leading-none uppercase">The Vault</h1>
+                 <p className="text-[10px] font-bold text-brand-green uppercase tracking-[0.2em] mt-1">
+                   Quick Reference Wisdom
+                 </p>
+              </div>
+            </div>
+            <AppMenu />
           </div>
-          <AppMenu />
+
+          {/* SEARCH BAR (Inside Header for better focus) */}
+          <div className="relative mt-2">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search concepts, fuel, or habits..."
+              className="w-full pl-11 pr-10 py-4 bg-white rounded-2xl font-sans text-sm text-brand-dark placeholder-brand-grey/60 shadow-lg border-none focus:ring-2 focus:ring-brand-light focus:outline-none transition-all"
+            />
+            {query && (
+              <button onClick={() => setQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-brand-grey">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-5 -mt-10 space-y-4 relative z-10">
-
-        {/* Search */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-grey" />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cards…"
-            className="w-full pl-10 pr-4 py-3 bg-white rounded-2xl font-sans text-sm text-brand-dark placeholder-brand-grey shadow-sm border border-brand-sand focus:border-brand-light focus:outline-none transition-colors"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-brand-grey"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+      <div className="max-w-md mx-auto px-5 -mt-6 space-y-8 relative z-10">
 
         {Object.keys(groups).length === 0 ? (
-          <div className="py-16 text-center space-y-2">
-            <BookOpen className="w-10 h-10 text-brand-sand mx-auto" />
+          <div className="py-20 text-center space-y-4">
+            <div className="w-16 h-16 bg-brand-grey/10 rounded-full flex items-center justify-center mx-auto">
+               <BookOpen className="w-8 h-8 text-brand-grey/30" />
+            </div>
             <p className="text-brand-grey font-bold text-sm">
-              {query ? "No cards match your search." : "No reference cards yet."}
+              {query ? "No cards match your search." : "The vault is being stocked."}
             </p>
-            {!query && (
-              <p className="text-brand-grey text-xs">Eske will add quick reference cards here.</p>
-            )}
           </div>
         ) : (
           Object.entries(groups).map(([category, categoryCards]) => (
-            <div key={category} className="space-y-2">
-              <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider px-1">{category}</p>
-              {categoryCards.map((card) => {
-                const isOpen = expanded === card.id;
-                return (
-                  <div
-                    key={card.id}
-                    className="bg-white rounded-2xl shadow-sm border border-brand-sand overflow-hidden"
-                  >
-                    <button
-                      onClick={() => setExpanded(isOpen ? null : card.id)}
-                      className="w-full p-4 text-left flex items-center gap-3 hover:bg-brand-sand/30 transition-colors"
+            <div key={category} className="space-y-3">
+              <div className="flex items-center gap-2 px-1">
+                 <div className="h-px bg-brand-grey/20 flex-1" />
+                 <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em]">{category}</p>
+                 <div className="h-px bg-brand-grey/20 flex-1" />
+              </div>
+              
+              <div className="space-y-3">
+                {categoryCards.map((card) => {
+                  const isOpen = expanded === card.id;
+                  return (
+                    <div
+                      key={card.id}
+                      className={`bg-white rounded-3xl transition-all duration-300 border ${
+                        isOpen ? "shadow-xl ring-1 ring-brand-light/20 border-brand-light/30" : "shadow-sm border-brand-sand"
+                      }`}
                     >
-                      <div className="w-8 h-8 rounded-xl bg-brand-light/10 flex items-center justify-center shrink-0">
-                        <BookOpen className="w-4 h-4 text-brand-light" />
-                      </div>
-                      <span className="flex-1 text-sm font-bold text-brand-dark">{card.title}</span>
-                      <span className="text-brand-grey text-xs font-bold shrink-0">{isOpen ? "Close" : "View"}</span>
-                    </button>
-                    {isOpen && (
-                      <div className="px-4 pb-4 pt-0">
-                        <div className="bg-brand-sand rounded-xl p-3">
-                          <p className="text-sm text-brand-dark leading-relaxed whitespace-pre-wrap">{card.content}</p>
+                      <button
+                        onClick={() => setExpanded(isOpen ? null : card.id)}
+                        className="w-full p-5 text-left flex items-center gap-4 group"
+                      >
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${
+                          isOpen ? "bg-brand-dark text-brand-green" : "bg-brand-sand text-brand-grey"
+                        }`}>
+                          <Sparkles className="w-5 h-5" />
                         </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                        <span className="flex-1 text-sm font-bold text-brand-dark leading-tight">{card.title}</span>
+                        <ChevronDown className={`w-5 h-5 text-brand-grey transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+                      </button>
+                      
+                      {isOpen && (
+                        <div className="px-5 pb-6 pt-0 animate-in fade-in slide-in-from-top-2">
+                          <div className="bg-brand-sand/50 rounded-2xl p-4 border border-brand-dark/5">
+                            <p className="text-sm text-brand-dark leading-relaxed whitespace-pre-wrap">{card.content}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           ))
         )}
+
+        {/* AI CALL TO ACTION */}
+        <div className="text-center py-10 px-6">
+           <p className="text-xs text-brand-grey leading-relaxed">
+             Need more context? <br />
+             <span className="font-bold text-brand-light">Ask Coach Strong AI</span> about any of these concepts for a personalized breakdown.
+           </p>
+        </div>
       </div>
     </main>
   );

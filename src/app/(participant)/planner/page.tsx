@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Loader2, CalendarDays } from "lucide-react";
+import { Loader2, CalendarDays, Info, Check, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
 import HomeButton from "@/components/HomeButton";
@@ -14,28 +14,20 @@ const DAY_LABELS: Record<Day, string> = {
   mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
 };
 
-const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string; dot: string }> = {
-  training:  { label: "Training",  bg: "bg-brand-dark",       text: "text-white",      dot: "bg-brand-dark" },
-  meal_prep: { label: "Meal Prep", bg: "bg-brand-light",      text: "text-white",      dot: "bg-brand-light" },
-  rest:      { label: "Rest",      bg: "bg-brand-green/80",   text: "text-white",      dot: "bg-brand-green" },
-  busy:      { label: "Busy",      bg: "bg-brand-grey/40",    text: "text-brand-dark", dot: "bg-brand-grey" },
+const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
+  training:  { label: "Training",  bg: "bg-brand-dark",       text: "text-white" },
+  meal_prep: { label: "Meal Prep", bg: "bg-brand-light",      text: "text-white" },
+  rest:      { label: "Rest Day",  bg: "bg-brand-green",      text: "text-brand-dark" },
+  busy:      { label: "Life/Busy", bg: "bg-brand-grey/20",    text: "text-brand-dark" },
 };
 
 const CYCLE: DayType[] = ["training", "meal_prep", "rest", "busy", null];
 
-function nextType(current: DayType): DayType {
-  const idx = CYCLE.indexOf(current);
-  return CYCLE[(idx + 1) % CYCLE.length];
-}
-
-const EMPTY_PLAN: Plan = { mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null };
-
 export default function PlannerPage() {
   const supabase = createClient();
-
   const [userId, setUserId] = useState<string | null>(null);
-  const [currentWeek, setCurrentWeek] = useState<number | null>(null);
-  const [plan, setPlan] = useState<Plan>(EMPTY_PLAN);
+  const [currentWeek, setCurrentWeek] = useState<number>(0);
+  const [plan, setPlan] = useState<Plan>({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -45,144 +37,130 @@ export default function PlannerPage() {
       if (!user) return;
       setUserId(user.id);
 
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("current_week")
-        .eq("id", user.id)
-        .single();
-
-      const week = profile?.current_week ?? 0;
+      const { data: profile } = await supabase.from("profiles").select("current_week").eq("id", user.id).single();
+      const week = profile?.current_week ?? 1;
       setCurrentWeek(week);
 
-      if (week > 0) {
-        const { data: planRow } = await supabase
-          .from("weekly_plan")
-          .select("plan")
-          .eq("user_id", user.id)
-          .eq("week", week)
-          .maybeSingle();
-        if (planRow?.plan) setPlan({ ...EMPTY_PLAN, ...planRow.plan });
-      }
+      const { data: planRow } = await supabase.from("weekly_plan").select("plan").eq("user_id", user.id).eq("week", week).maybeSingle();
+      if (planRow?.plan) setPlan(planRow.plan);
       setLoading(false);
     }
     load();
-  }, [supabase]);
+  }, []);
 
   async function handleDayTap(day: Day) {
-    if (!userId || !currentWeek) return;
-    const next = nextType(plan[day]);
+    if (!userId) return;
+    const current = plan[day];
+    const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
     const updated = { ...plan, [day]: next };
+    
     setPlan(updated);
     setSaving(true);
-    await supabase.from("weekly_plan").upsert(
-      { user_id: userId, week: currentWeek, plan: updated, updated_at: new Date().toISOString() },
-      { onConflict: "user_id,week" }
-    );
+    await supabase.from("weekly_plan").upsert({ 
+      user_id: userId, 
+      week: currentWeek, 
+      plan: updated, 
+      updated_at: new Date().toISOString() 
+    }, { onConflict: "user_id,week" });
     setSaving(false);
   }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-brand-sand flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-light" />
-      </main>
-    );
-  }
-
-  if (!currentWeek) {
-    return (
-      <main className="min-h-screen bg-brand-sand flex items-center justify-center px-6">
-        <p className="text-brand-grey text-sm font-bold text-center">Your program hasn't started yet. Check back on kick-off day.</p>
-      </main>
-    );
-  }
+  if (loading) return <div className="min-h-screen bg-brand-sand flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-light" /></div>;
 
   return (
-    <main className="min-h-screen bg-brand-sand pb-24 font-sans text-brand-dark">
-      <header className="bg-linear-to-b from-brand-dark to-[#1a15a3] text-white pt-14 pb-20 px-6 rounded-b-4xl shadow-[0_10px_30px_rgba(17,12,148,0.15)] relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-mid/30 rounded-full blur-[80px] pointer-events-none"></div>
-        <div className="relative z-10 flex justify-between items-start">
-          <div>
+    <main className="min-h-screen bg-brand-sand pb-24 text-brand-dark overflow-x-hidden">
+      
+      {/* HEADER */}
+      <header className="bg-brand-dark text-white pt-12 pb-10 px-6 rounded-b-[2.5rem] shadow-xl relative">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-mid/10 rounded-full blur-[60px]" />
+        <div className="relative z-10 flex justify-between items-center">
+          <div className="flex items-center gap-4">
             <HomeButton />
-            <p className="text-brand-light font-bold text-xs uppercase tracking-[0.2em] mb-1 mt-3">Week {currentWeek}</p>
-            <h1 className="font-heading text-4xl tracking-wider">MY WEEK PLAN</h1>
+            <div>
+               <h1 className="font-heading text-3xl tracking-wider leading-none">WEEK PLANNER</h1>
+               <p className="text-[10px] font-bold text-brand-green uppercase tracking-[0.2em] mt-1">
+                 Week {currentWeek} • The Battle Plan
+               </p>
+            </div>
           </div>
           <AppMenu />
         </div>
       </header>
 
-      <div className="max-w-md mx-auto px-5 -mt-10 space-y-5 relative z-10">
+      <div className="max-w-md mx-auto px-5 -mt-6 space-y-6 relative z-10">
 
-        {/* Legend */}
-        <section className="bg-white p-4 rounded-2xl shadow-sm border border-brand-sand">
-          <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-3">Tap a day to cycle through types</p>
-          <div className="flex flex-wrap gap-2">
-            {Object.entries(TYPE_CONFIG).map(([type, cfg]) => (
-              <div key={type} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${cfg.bg} ${cfg.text}`}>
-                {cfg.label}
+        {/* COACHING PRINCIPLE CARD */}
+        <section className="bg-white p-5 rounded-3xl shadow-sm border border-brand-sand">
+           <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-brand-dark rounded-2xl flex items-center justify-center shrink-0">
+                 <Info className="w-5 h-5 text-brand-green" />
               </div>
-            ))}
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-sand text-brand-grey border border-brand-grey/20">
-              Unset
-            </div>
-          </div>
+              <div>
+                 <p className="text-sm font-bold text-brand-dark">Shift, Don’t Delete</p>
+                 <p className="text-xs text-brand-grey leading-relaxed mt-1">
+                   Life happens. You can move your training to a different day, but you cannot delete the intent.
+                 </p>
+              </div>
+           </div>
         </section>
 
-        {/* 7-day grid */}
-        <section className="bg-white p-5 rounded-2xl shadow-sm border border-brand-sand">
-          <div className="flex items-center justify-between mb-4">
+        {/* 7-DAY BATTLE PLAN */}
+        <section className="bg-white p-6 rounded-[2rem] shadow-sm border border-brand-sand">
+          <div className="flex justify-between items-center mb-6 px-2">
             <div className="flex items-center gap-2">
-              <CalendarDays className="w-4 h-4 text-brand-mid" />
-              <h2 className="font-heading text-xl tracking-wide text-brand-dark pt-1">THIS WEEK</h2>
+              <CalendarDays className="w-4 h-4 text-brand-light" />
+              <h2 className="font-heading text-xl tracking-wide pt-1">THIS WEEK</h2>
             </div>
-            {saving && <Loader2 className="w-4 h-4 animate-spin text-brand-grey" />}
+            {saving && <Clock className="w-4 h-4 animate-pulse text-brand-light" />}
           </div>
 
-          <div className="grid grid-cols-7 gap-1 sm:gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {DAYS.map((day) => {
               const type = plan[day];
               const cfg = type ? TYPE_CONFIG[type] : null;
+              
               return (
                 <button
                   key={day}
                   onClick={() => handleDayTap(day)}
-                  className={`flex flex-col items-center gap-1 sm:gap-1.5 py-2 sm:py-3 rounded-xl transition-all active:scale-95 ${
-                    cfg ? `${cfg.bg} ${cfg.text}` : "bg-brand-sand text-brand-grey"
+                  className={`flex items-center justify-between p-4 rounded-2xl transition-all active:scale-[0.98] border ${
+                    cfg ? `${cfg.bg} border-transparent` : "bg-brand-sand border-brand-dark/5"
                   }`}
                 >
-                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wide">{DAY_LABELS[day]}</span>
-                  <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${cfg ? "bg-white/50" : "bg-brand-grey/30"}`} />
+                  <span className={`text-xs font-black uppercase tracking-widest ${cfg ? cfg.text : "text-brand-grey"}`}>
+                    {DAY_LABELS[day]}
+                  </span>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${cfg ? cfg.text : "text-brand-grey/50"}`}>
+                      {cfg ? cfg.label : "Tap to set"}
+                    </span>
+                    {cfg && <Check className={`w-4 h-4 ${cfg.text}`} />}
+                  </div>
                 </button>
               );
             })}
           </div>
         </section>
 
-        {/* Rule reminder */}
-        <div className="px-1">
-          <p className="text-xs text-brand-grey text-center leading-relaxed">
-            You can shift days, you can shift times — but you can't delete.
-          </p>
+        {/* THE LEGEND (Now more compact) */}
+        <div className="px-4 py-2">
+          <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-3 text-center">Plan Categories</p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
+              <div key={key} className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-brand-sand shadow-sm">
+                <div className={`w-2 h-2 rounded-full ${cfg.bg}`} />
+                <span className="text-[9px] font-bold text-brand-dark uppercase">{cfg.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* Summary */}
-        {Object.values(plan).some(Boolean) && (
-          <section className="bg-white p-5 rounded-2xl shadow-sm border border-brand-sand space-y-3">
-            <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider">Your week at a glance</p>
-            {(["training", "meal_prep", "rest", "busy"] as const).map((type) => {
-              const days = DAYS.filter(d => plan[d] === type).map(d => DAY_LABELS[d]);
-              if (!days.length) return null;
-              const cfg = TYPE_CONFIG[type];
-              return (
-                <div key={type} className="flex items-center gap-3">
-                  <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${cfg.dot}`} />
-                  <span className="text-sm font-bold text-brand-dark">{cfg.label}</span>
-                  <span className="text-sm text-brand-grey">{days.join(", ")}</span>
-                </div>
-              );
-            })}
-          </section>
-        )}
+        {/* AI INTEGRATION NOTE */}
+        <p className="text-[10px] text-brand-grey font-medium text-center px-8 leading-relaxed italic">
+          Coach Strong AI adapts her check-ins based on your plan. If it's a rest day, she knows.
+        </p>
+
       </div>
     </main>
   );

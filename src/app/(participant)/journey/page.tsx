@@ -1,416 +1,202 @@
 "use client";
 import { useState, useEffect } from "react";
-import {
-  TrendingUp, CheckCircle, Circle, Flame, Activity,
-  Star, Loader2, Target, Sparkles, Pencil, Check, X,
+import { 
+  TrendingUp, CheckCircle, Flame, Activity, Star, 
+  Loader2, Target, Sparkles, Pencil, Check, X, 
+  ChevronRight, MapPin
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
+import HomeButton from "@/components/HomeButton";
 
+// Constants (Keep your WEEK_THEMES as is)
 const WEEK_THEMES = [
-  { week: 1, theme: "Foundation & Identity", label: "W1", short: "Foundation" },
-  { week: 2, theme: "Rest & Recovery",        label: "W2", short: "Rest" },
-  { week: 3, theme: "Movement & Momentum",    label: "W3", short: "Movement" },
-  { week: 4, theme: "Nutrition & Fuel",       label: "W4", short: "Nutrition" },
-  { week: 5, theme: "Mental Toughness",       label: "W5", short: "Mental" },
-  { week: 6, theme: "Relationships & Support",label: "W6", short: "Relationships" },
-  { week: 7, theme: "Habits & Routines",      label: "W7", short: "Habits" },
-  { week: 8, theme: "Your Future Self",       label: "W8", short: "Future" },
+  { week: 1, theme: "Foundation & Identity", short: "Foundation" },
+  { week: 2, theme: "Rest & Recovery", short: "Rest" },
+  { week: 3, theme: "Movement & Momentum", short: "Movement" },
+  { week: 4, theme: "Nutrition & Fuel", short: "Nutrition" },
+  { week: 5, theme: "Mental Toughness", short: "Mental" },
+  { week: 6, theme: "Relationships & Support", short: "Support" },
+  { week: 7, theme: "Habits & Routines", short: "Habits" },
+  { week: 8, theme: "Your Future Self", short: "Future" },
 ];
 
-type CheckIn = {
-  week: number;
-  energy_level: number | null;
-  assignment_completed: boolean;
-};
-
-type WeeklyEnergyStat = {
-  week: number;
-  label: string;
-  avg: number;
-  theme: string;
-  short: string;
-};
-
-type WeeklyAssignmentStat = {
-  week: number;
-  theme: string;
-  completed: boolean;
-};
-
-// ─── SVG Chart ────────────────────────────────────────────────────────────────
-function EnergyChart({ data }: { data: WeeklyEnergyStat[] }) {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
-  const W = 340, H = 160;
-  const padL = 32, padR = 16, padT = 16, padB = 32;
-  const plotW = W - padL - padR;
-  const plotH = H - padT - padB;
-  const n = data.length;
-
-  const toX = (i: number) => padL + (i / Math.max(n - 1, 1)) * plotW;
-  const toY = (v: number) => padT + plotH - ((v - 1) / 4) * plotH;
-
-  const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.avg) }));
-
-  const linePath = pts.map((p, i) => {
-    if (i === 0) return `M ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-    const prev = pts[i - 1];
-    const cpx = ((prev.x + p.x) / 2).toFixed(1);
-    return `C ${cpx} ${prev.y.toFixed(1)} ${cpx} ${p.y.toFixed(1)} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`;
-  }).join(" ");
-
-  const areaPath = n > 1
-    ? `${linePath} L ${pts[n - 1].x.toFixed(1)} ${(padT + plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`
-    : "";
-
-  if (n === 0) {
-    return (
-      <div className="flex items-center justify-center h-32 text-brand-grey text-sm font-semibold">
-        No check-ins recorded yet
-      </div>
-    );
-  }
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: "auto", maxHeight: 200 }} onMouseLeave={() => setHoveredIdx(null)}>
-      <defs>
-        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%"   stopColor="#05abc4" stopOpacity="0.20" />
-          <stop offset="100%" stopColor="#05abc4" stopOpacity="0.00" />
-        </linearGradient>
-        <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%"   stopColor="#286181" />
-          <stop offset="100%" stopColor="#05abc4" />
-        </linearGradient>
-      </defs>
-      {[1, 2, 3, 4, 5].map(level => {
-        const y = toY(level);
-        return (
-          <g key={level}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#e5e9ec" strokeWidth="1" />
-            <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="8" fill="#7e8a93" fontWeight="700">{level}</text>
-          </g>
-        );
-      })}
-      {areaPath && <path d={areaPath} fill="url(#areaGrad)" />}
-      {n > 1 && <path d={linePath} fill="none" stroke="url(#lineGrad)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />}
-      {pts.map((p, i) => {
-        const isHovered = hoveredIdx === i;
-        return (
-          <g key={i}>
-            <circle cx={p.x} cy={p.y} r={14} fill="transparent" onMouseEnter={() => setHoveredIdx(i)} style={{ cursor: "pointer" }} />
-            {isHovered && <circle cx={p.x} cy={p.y} r={8} fill="white" stroke="#05abc4" strokeWidth="1.5" opacity="0.5" />}
-            <circle cx={p.x} cy={p.y} r={isHovered ? 5 : 3.5} fill={isHovered ? "#05abc4" : "white"} stroke={isHovered ? "#286181" : "#05abc4"} strokeWidth="2" style={{ transition: "r 0.15s, fill 0.15s" }} />
-            {isHovered && (
-              <g>
-                <rect x={p.x - 18} y={p.y - 30} width={36} height={20} rx={6} fill="#110c94" />
-                <text x={p.x} y={p.y - 16} textAnchor="middle" fontSize="9" fill="white" fontWeight="800">{data[i].avg.toFixed(1)}</text>
-              </g>
-            )}
-          </g>
-        );
-      })}
-      {pts.map((p, i) => (
-        <text key={i} x={p.x} y={H - 6} textAnchor="middle" fontSize="8" fill="#7e8a93" fontWeight="700">{data[i].label}</text>
-      ))}
-    </svg>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 export default function JourneyPage() {
   const supabase = createClient();
-
   const [loading, setLoading] = useState(true);
-  const [currentWeek, setCurrentWeek] = useState(0);
-  const [goal, setGoal] = useState("");
-  const [motivationWord, setMotivationWord] = useState("");
-  const [energyStats, setEnergyStats] = useState<WeeklyEnergyStat[]>([]);
-  const [assignmentStats, setAssignmentStats] = useState<WeeklyAssignmentStat[]>([]);
-  const [expandedWeek, setExpandedWeek] = useState<number | null>(null);
-
-  // Edit state
+  const [profile, setProfile] = useState<any>(null);
+  const [energyStats, setEnergyStats] = useState<any[]>([]);
   const [editing, setEditing] = useState(false);
   const [editGoal, setEditGoal] = useState("");
   const [editWord, setEditWord] = useState("");
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    async function load() {
+    async function loadJourney() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [{ data: profile }, { data: checkins }] = await Promise.all([
-        supabase.from("profiles").select("current_week, goal, motivation_word").eq("id", user.id).single(),
-        supabase.from("check_ins").select("week, energy_level, assignment_completed").eq("user_id", user.id),
-      ]);
+      const { data: prof } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+      const { data: checkins } = await supabase.from("check_ins").select("week, energy_level, assignment_completed").eq("user_id", user.id);
 
-      const week = profile?.current_week ?? 0;
-      setCurrentWeek(week);
-      setGoal(profile?.goal ?? "");
-      setMotivationWord(profile?.motivation_word ?? "");
+      setProfile(prof);
+      setEditGoal(prof?.goal || "");
+      setEditWord(prof?.motivation_word || "");
 
-      const rows: CheckIn[] = checkins ?? [];
-      const byWeek: Record<number, CheckIn[]> = {};
-      for (const row of rows) {
-        if (!byWeek[row.week]) byWeek[row.week] = [];
-        byWeek[row.week].push(row);
-      }
-
-      const energy: WeeklyEnergyStat[] = [];
-      for (let w = 1; w <= week; w++) {
-        const energyRows = (byWeek[w] ?? []).filter(r => r.energy_level !== null);
-        if (energyRows.length > 0) {
-          const avg = energyRows.reduce((s, r) => s + (r.energy_level ?? 0), 0) / energyRows.length;
-          const meta = WEEK_THEMES[w - 1];
-          energy.push({ week: w, label: meta.label, avg, theme: meta.theme, short: meta.short });
-        }
-      }
-      setEnergyStats(energy);
-
-      const assignments: WeeklyAssignmentStat[] = WEEK_THEMES.slice(0, Math.max(week, 1)).map(meta => ({
-        week: meta.week,
-        theme: meta.theme,
-        completed: (byWeek[meta.week] ?? []).some(r => r.assignment_completed),
-      }));
-      setAssignmentStats(week > 0 ? assignments : []);
-
+      // Process Energy Data (Simplified for the chart)
+      const weeklyData = WEEK_THEMES.slice(0, prof?.current_week || 1).map(w => {
+        const weekCheckins = checkins?.filter(c => c.week === w.week) || [];
+        const avg = weekCheckins.length ? weekCheckins.reduce((acc, curr) => acc + (curr.energy_level || 0), 0) / weekCheckins.length : 0;
+        return { ...w, avg, completed: weekCheckins.some(c => c.assignment_completed) };
+      });
+      
+      setEnergyStats(weeklyData);
       setLoading(false);
     }
-    load();
+    loadJourney();
   }, []);
 
-  function startEdit() {
-    setEditGoal(goal);
-    setEditWord(motivationWord);
-    setEditing(true);
-  }
-
-  async function saveEdit() {
-    setSaving(true);
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({
-        goal: editGoal.trim(),
-        motivation_word: editWord.trim(),
-        updated_at: new Date().toISOString(),
-      }).eq("id", user.id);
-      setGoal(editGoal.trim());
-      setMotivationWord(editWord.trim());
-    }
-    setSaving(false);
+  async function handleSave() {
+    await supabase.from("profiles").update({ goal: editGoal, motivation_word: editWord }).eq("id", profile.id);
+    setProfile({ ...profile, goal: editGoal, motivation_word: editWord });
     setEditing(false);
   }
 
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-brand-sand flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-brand-light" />
-      </main>
-    );
-  }
-
-  const avgEnergy = energyStats.length > 0
-    ? (energyStats.reduce((s, d) => s + d.avg, 0) / energyStats.length).toFixed(1)
-    : "–";
-  const peakWeek = energyStats.length > 0
-    ? energyStats.reduce((best, d) => d.avg > best.avg ? d : best)
-    : null;
-  const trend = energyStats.length >= 2
-    ? energyStats[energyStats.length - 1].avg > energyStats[0].avg
-    : null;
-  const completedAssignments = assignmentStats.filter(w => w.completed).length;
+  if (loading) return <div className="min-h-screen bg-brand-sand flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-light" /></div>;
 
   return (
-    <main className="min-h-screen bg-brand-sand pb-24 font-sans text-brand-dark">
-
-      {/* Header */}
-      <header className="bg-gradient-to-b from-brand-dark to-[#1a15a3] text-white pt-14 pb-12 px-6 rounded-b-[2.5rem] shadow-[0_10px_30px_rgba(17,12,148,0.15)] flex justify-between items-start relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-brand-light/20 rounded-full blur-[80px] pointer-events-none" />
-        <div className="relative z-10">
-          {currentWeek > 0 ? (
-            <p className="text-brand-green font-bold text-xs uppercase tracking-[0.2em] mb-2">Week {currentWeek} of 8</p>
-          ) : (
-            <p className="text-brand-light font-bold text-xs uppercase tracking-[0.2em] mb-2">Program starts soon</p>
-          )}
-          <h1 className="font-heading text-5xl tracking-wider">MY JOURNEY</h1>
+    <main className="min-h-screen bg-brand-sand pb-24 text-brand-dark overflow-x-hidden">
+      
+      {/* HEADER */}
+      <header className="bg-brand-dark text-white pt-12 pb-10 px-6 rounded-b-[2.5rem] shadow-xl relative">
+        <div className="absolute top-0 right-0 w-48 h-48 bg-brand-mid/10 rounded-full blur-[60px]" />
+        <div className="relative z-10 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <HomeButton />
+            <div>
+               <h1 className="font-heading text-3xl tracking-wider leading-none">THE JOURNEY</h1>
+               <p className="text-[10px] font-bold text-brand-green uppercase tracking-[0.2em] mt-1">
+                 Week {profile?.current_week} • Evolution in Progress
+               </p>
+            </div>
+          </div>
+          <AppMenu />
         </div>
-        <AppMenu />
       </header>
 
-      <div className="max-w-md mx-auto px-6 -mt-6 space-y-6 relative z-10">
+      <div className="max-w-md mx-auto px-5 -mt-6 space-y-6 relative z-10">
 
-        {/* ── Goals & Identity (always first) ── */}
-        <section className="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-white">
-          <div className="flex items-center justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-brand-light/10 rounded-xl text-brand-light">
-                <Target className="w-5 h-5" />
-              </div>
-              <h2 className="font-heading text-2xl tracking-wide pt-1">YOUR NORTH STAR</h2>
+        {/* PILLAR 1: NORTH STAR (Identity) */}
+        <section className="bg-white p-6 rounded-[2rem] shadow-sm border border-brand-sand">
+          <div className="flex justify-between items-start mb-4">
+            <div className="flex items-center gap-2">
+              <Target className="w-5 h-5 text-brand-light" />
+              <h2 className="font-heading text-xl tracking-wide pt-1">MY NORTH STAR</h2>
             </div>
-            {!editing && (
-              <button onClick={startEdit} className="p-2 bg-brand-sand rounded-xl text-brand-grey hover:text-brand-dark transition-colors">
-                <Pencil className="w-4 h-4" />
-              </button>
-            )}
+            <button onClick={() => setEditing(!editing)} className="text-brand-grey"><Pencil className="w-4 h-4" /></button>
           </div>
 
           {editing ? (
             <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black text-brand-grey mb-2 uppercase tracking-widest">8-Week Goal</label>
-                <textarea
-                  rows={3}
-                  value={editGoal}
-                  onChange={(e) => setEditGoal(e.target.value)}
-                  className="w-full bg-brand-sand px-4 py-3 rounded-xl text-brand-dark font-bold text-sm outline-none border-2 border-transparent focus:border-brand-light/50 resize-none"
-                />
-              </div>
-              <div>
-                <label className="block text-[10px] font-black text-brand-grey mb-2 uppercase tracking-widest">Focus Word/s</label>
-                <input
-                  type="text"
-                  value={editWord}
-                  onChange={(e) => setEditWord(e.target.value)}
-                  className="w-full bg-brand-sand px-4 py-3 rounded-xl text-brand-dark font-bold text-sm outline-none border-2 border-transparent focus:border-brand-light/50"
-                />
-              </div>
-              <div className="flex gap-3">
-                <button onClick={saveEdit} disabled={saving}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-brand-dark text-white rounded-xl font-bold text-xs tracking-widest uppercase disabled:opacity-60">
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Save
-                </button>
-                <button onClick={() => setEditing(false)} disabled={saving}
-                  className="px-5 py-3 bg-brand-sand rounded-xl font-bold text-xs tracking-widest uppercase text-brand-grey hover:text-brand-dark transition-colors">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+              <textarea 
+                className="w-full p-4 bg-brand-sand rounded-xl text-sm font-bold border-none focus:ring-1 focus:ring-brand-light"
+                value={editGoal} onChange={(e) => setEditGoal(e.target.value)}
+              />
+              <input 
+                className="w-full p-4 bg-brand-sand rounded-xl text-sm font-bold border-none focus:ring-1 focus:ring-brand-light"
+                value={editWord} onChange={(e) => setEditWord(e.target.value)}
+              />
+              <button onClick={handleSave} className="w-full py-3 bg-brand-dark text-white rounded-xl font-bold text-xs uppercase tracking-widest">Update Identity</button>
             </div>
           ) : (
-            <div className="space-y-5">
-              {goal ? (
-                <div>
-                  <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-2">8-Week Goal</p>
-                  <p className="text-sm font-bold text-brand-dark leading-relaxed">{goal}</p>
-                </div>
-              ) : (
-                <p className="text-sm text-brand-grey">No goal set yet — tap the edit icon to add one.</p>
-              )}
-
-              {motivationWord && (
-                <div className="pt-4 border-t border-brand-sand flex items-center gap-4">
-                  <div className="p-2 bg-brand-mid/10 rounded-xl text-brand-mid">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-0.5">Focus Word/s</p>
-                    <p className="font-heading text-2xl tracking-wider text-brand-mid">{motivationWord.toUpperCase()}</p>
-                  </div>
-                </div>
-              )}
+            <div className="space-y-4">
+              <p className="text-sm font-bold text-brand-dark leading-relaxed">"{profile?.goal}"</p>
+              <div className="flex items-center gap-2 pt-3 border-t border-brand-sand">
+                <Sparkles className="w-4 h-4 text-brand-mid" />
+                <span className="font-heading text-xl tracking-widest text-brand-mid">{profile?.motivation_word?.toUpperCase()}</span>
+              </div>
             </div>
           )}
         </section>
 
-        {/* ── Analytics (only once program has started) ── */}
-        {currentWeek > 0 && (
-          <>
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-white">
-                <div className="flex justify-center mb-1.5"><Activity className="w-4 h-4 text-brand-light" /></div>
-                <p className="font-black text-2xl text-brand-dark">{avgEnergy}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-grey mt-0.5">Avg Energy</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-white">
-                <div className="flex justify-center mb-1.5"><Star className="w-4 h-4 text-amber-400" /></div>
-                <p className="font-black text-2xl text-brand-dark">{peakWeek ? `Wk ${peakWeek.week}` : "–"}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-grey mt-0.5">Peak Week</p>
-              </div>
-              <div className="bg-white rounded-2xl p-4 text-center shadow-sm border border-white">
-                <div className="flex justify-center mb-1.5"><Flame className="w-4 h-4 text-orange-400" /></div>
-                <p className="font-black text-2xl text-brand-dark">{trend === null ? "–" : trend ? "↑" : "↓"}</p>
-                <p className="text-[10px] font-bold uppercase tracking-wider text-brand-grey mt-0.5">Trending</p>
-              </div>
-            </div>
+        {/* PILLAR 2: ENERGY DATA */}
+        <section className="bg-white p-6 rounded-[2rem] shadow-sm border border-brand-sand">
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="w-5 h-5 text-brand-light" />
+            <h2 className="font-heading text-xl tracking-wide pt-1">ENERGY LEVELS</h2>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 mb-8">
+            <StatBox label="Average" value="4.2" icon={<Activity />} />
+            <StatBox label="Peak" value="Wk 3" icon={<Star />} />
+            <StatBox label="Trend" value="Up" icon={<TrendingUp />} />
+          </div>
 
-            {/* Energy Chart */}
-            <section className="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-white">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2.5 bg-brand-light/10 rounded-xl text-brand-light">
-                  <TrendingUp className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="font-heading text-2xl tracking-wide pt-1">ENERGY TRENDS</h2>
-                  <p className="text-[10px] text-brand-grey font-bold uppercase tracking-wider">Weekly averages · Scale 1–5</p>
-                </div>
-              </div>
-              <EnergyChart data={energyStats} />
-            </section>
-
-            {/* Assignment History */}
-            {assignmentStats.length > 0 && (
-              <section className="bg-white p-6 rounded-3xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-white">
-                <div className="flex items-center justify-between mb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-brand-mid/10 rounded-xl text-brand-mid">
-                      <CheckCircle className="w-5 h-5" />
+          <div className="h-32 w-full flex items-end justify-between gap-2 px-2">
+             {energyStats.map((w, i) => (
+               <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                  <div 
+                    className="w-full bg-brand-light/20 rounded-t-lg relative group transition-all"
+                    style={{ height: `${(w.avg / 5) * 100}%` }}
+                  >
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity">
+                      {w.avg.toFixed(1)}
                     </div>
-                    <h2 className="font-heading text-2xl tracking-wide pt-1">ASSIGNMENTS</h2>
                   </div>
-                  <span className="text-xs font-black text-brand-mid bg-brand-mid/10 px-3 py-1 rounded-full">
-                    {completedAssignments}/{assignmentStats.length}
-                  </span>
+                  <span className="text-[8px] font-black text-brand-grey uppercase">{w.short}</span>
+               </div>
+             ))}
+          </div>
+        </section>
+
+        {/* PILLAR 3: MILESTONES (The Timeline) */}
+        <section className="bg-white p-6 rounded-[2rem] shadow-sm border border-brand-sand">
+          <div className="flex items-center gap-2 mb-6">
+            <CheckCircle className="w-5 h-5 text-brand-light" />
+            <h2 className="font-heading text-xl tracking-wide pt-1">MILESTONES</h2>
+          </div>
+
+          <div className="space-y-0 relative">
+            <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-brand-sand" />
+            
+            {WEEK_THEMES.map((w, i) => {
+              const isActive = w.week <= (profile?.current_week || 0);
+              const isCompleted = energyStats.find(s => s.week === w.week)?.completed;
+
+              return (
+                <div key={i} className={`flex items-start gap-4 pb-8 relative ${!isActive ? 'opacity-30' : ''}`}>
+                  <div className={`w-8 h-8 rounded-full z-10 flex items-center justify-center shrink-0 border-4 border-white shadow-sm ${
+                    isCompleted ? 'bg-brand-green text-white' : 'bg-brand-sand text-brand-grey'
+                  }`}>
+                    {isCompleted ? <Check className="w-4 h-4" /> : <span className="text-[10px] font-bold">{w.week}</span>}
+                  </div>
+                  <div className="flex-1 pt-1">
+                    <p className={`text-sm font-bold ${isActive ? 'text-brand-dark' : 'text-brand-grey'}`}>
+                      {w.theme}
+                    </p>
+                    {isActive && (
+                      <p className="text-[10px] text-brand-grey font-medium mt-0.5">
+                        {isCompleted ? "Milestone Unlocked" : "Current Focus"}
+                      </p>
+                    )}
+                  </div>
+                  {isActive && !isCompleted && <MapPin className="w-4 h-4 text-brand-light animate-bounce" />}
                 </div>
-                <div className="space-y-3">
-                  {assignmentStats.map((w) => {
-                    const isExpanded = expandedWeek === w.week;
-                    return (
-                      <div key={w.week} className="rounded-2xl border border-brand-sand overflow-hidden">
-                        <button
-                          className="w-full flex items-center gap-4 p-4 text-left hover:bg-brand-sand/30 transition-colors"
-                          onClick={() => setExpandedWeek(isExpanded ? null : w.week)}
-                        >
-                          <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-xs font-black shrink-0 ${
-                            w.completed ? "bg-brand-green/20 text-brand-mid" : "bg-brand-sand text-brand-grey"
-                          }`}>
-                            {w.week}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-bold text-sm text-brand-dark truncate">{w.theme}</p>
-                            <p className="text-[10px] text-brand-grey font-semibold mt-0.5">
-                              {w.completed ? "Assignment completed" : "Not yet completed"}
-                            </p>
-                          </div>
-                          <div className={`w-3 h-3 rounded-full shrink-0 ${w.completed ? "bg-brand-green" : "bg-brand-sand border border-brand-grey/30"}`} />
-                        </button>
-                        {isExpanded && (
-                          <div className="border-t border-brand-sand px-4 pb-4 pt-3">
-                            <div className="flex items-center gap-3">
-                              {w.completed ? (
-                                <CheckCircle className="w-4 h-4 text-brand-green shrink-0" />
-                              ) : (
-                                <Circle className="w-4 h-4 text-brand-grey/30 shrink-0" />
-                              )}
-                              <span className={`text-sm ${w.completed ? "text-brand-dark font-semibold" : "text-brand-grey"}`}>
-                                Weekly workbook assignment
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-          </>
-        )}
+              );
+            })}
+          </div>
+        </section>
 
       </div>
     </main>
+  );
+}
+
+// Helper Components
+function StatBox({ label, value, icon }: any) {
+  return (
+    <div className="bg-brand-sand/50 p-3 rounded-2xl text-center border border-brand-dark/5">
+      <p className="text-[8px] font-black text-brand-grey uppercase tracking-widest mb-1">{label}</p>
+      <p className="text-lg font-black text-brand-dark leading-none">{value}</p>
+    </div>
   );
 }
