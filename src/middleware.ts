@@ -1,22 +1,17 @@
-// middleware.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 
-const PUBLIC_ROUTES = ['/', '/login', '/api/elevenlabs', '/auth/callback']
+// Routes that anyone can see (no login required)
+const PUBLIC_ROUTES = ['/', '/login', '/auth/callback']
 
-const GATE_EXEMPT = [
-  '/onboarding',
-  '/discovery',
-  '/voice-session',
-  '/api/',
-  '/admin',
-]
+// Routes that are allowed even if the user hasn't finished onboarding/discovery
+const GATE_EXEMPT = ['/onboarding', '/discovery', '/voice-session', '/api', '/admin']
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  let response = NextResponse.next({ request })
 
-  let response = NextResponse.next()
-
+  // 1. Initialize Supabase SSR Client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,6 +22,8 @@ export async function middleware(request: NextRequest) {
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
+            request.cookies.set(name, value)
+            response = NextResponse.next({ request })
             response.cookies.set(name, value, options)
           })
         },
@@ -34,46 +31,26 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
+  // 2. Refresh session (Essential for auth to work)
+  const { data: { session } } = await supabase.auth.getSession()
+  const user = session?.user
 
-  console.log(
-    '[middleware]',
-    pathname,
-    '| user:',
-    user?.email ?? 'null',
-    '| error:',
-    userError?.message ?? 'none',
-  )
-  console.log(
-    '[middleware] cookies:',
-    request.cookies.getAll().map((c) => c.name),
-  )
-
-  // If not authenticated and trying to access a protected route → go to /login
+  // 3. Logic: If NOT logged in and trying to access a private page
   if (!user && !PUBLIC_ROUTES.includes(pathname)) {
-    console.log('[middleware] redirecting to /login because user is null on', pathname)
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users away from / and /login to /dashboard
+  // 4. Logic: If LOGGED IN and trying to access login/landing page
   if (user && (pathname === '/' || pathname === '/login')) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('is_admin')
-      .eq('id', user.id)
-      .single()
-
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
     return NextResponse.redirect(url)
   }
 
-  // Onboarding / discovery gating
+  // 5. Logic: Onboarding & Discovery Gates
+  // Only check this if the user is logged in and not on a "gate exempt" page
   if (user && !GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -81,17 +58,15 @@ export async function middleware(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
+    // Coaches/Admins are allowed to bypass the gates
     if (!profile?.is_admin) {
-      if (profile && !profile.onboarding_completed) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/onboarding'
-        return NextResponse.redirect(url)
+      // Force Onboarding
+      if (!profile?.onboarding_completed) {
+        return NextResponse.redirect(new URL('/onboarding', request.url))
       }
-
-      if (profile && profile.onboarding_completed && !profile.discovery_completed) {
-        const url = request.nextUrl.clone()
-        url.pathname = '/discovery'
-        return NextResponse.redirect(url)
+      // Force Discovery Voice Interview
+      if (!profile?.discovery_completed) {
+        return NextResponse.redirect(new URL('/discovery', request.url))
       }
     }
   }
@@ -101,6 +76,13 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|manifest\\.json|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    /*
+     * Match all request paths except for the ones starting with:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - images/logos/manifest
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
