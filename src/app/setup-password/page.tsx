@@ -31,7 +31,10 @@ export default function SetupPassword() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password });
+    const { error } = await supabase.auth.updateUser({
+      password,
+      data: { has_password: true },
+    });
 
     if (error) {
       setError(error.message);

@@ -83,7 +83,7 @@ export default function JournalPage() {
                  <Sparkles className="w-5 h-5 text-brand-light" />
               </div>
               <div>
-                 <p className="text-sm font-bold text-brand-dark">Training the Digital Brain</p>
+                 <p className="text-sm font-bold text-brand-dark">Training Coach Strong</p>
                  <p className="text-xs text-brand-grey leading-relaxed mt-1">
                    Your insights help Coach Strong understand your evolution. Capture what you now know about yourself.
                  </p>
@@ -157,7 +157,7 @@ export default function JournalPage() {
               className="w-full py-4 bg-brand-dark text-white rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-              Save to Digital Brain
+              Save to Coach Strong
             </button>
           </div>
         </div>

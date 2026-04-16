@@ -1,18 +1,56 @@
 "use client";
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Mail, Loader2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Mail, Loader2, Lock, ArrowLeft } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
+type Step = "email" | "password" | "magic-link" | "sent";
+
 export default function LoginPage() {
+  const [step, setStep] = useState<Step>("email");
   const [email, setEmail] = useState("");
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailContinue = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await fetch("/api/auth/has-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const { hasPassword } = await res.json();
+      setStep(hasPassword ? "password" : "magic-link");
+    } catch {
+      setStep("magic-link");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    const supabase = createClient();
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    setIsLoading(false);
+    if (error) {
+      setError("Incorrect password. Try again or use a magic link.");
+    } else {
+      window.location.href = "/dashboard";
+    }
+  };
+
+  const handleMagicLink = async (e?: React.FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
     setIsLoading(true);
     setError(null);
     const supabase = createClient();
@@ -21,12 +59,11 @@ export default function LoginPage() {
       email,
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     });
-    
     setIsLoading(false);
     if (error) {
       setError(error.message);
     } else {
-      setIsSubmitted(true);
+      setStep("sent");
     }
   };
 
@@ -63,18 +100,20 @@ export default function LoginPage() {
             className="drop-shadow-2xl"
           />
           <h1 className="font-logo text-sm font-bold tracking-[0.3em] text-white mt-4 opacity-50">
-            COACH STRONG AI
+            COACH STRONG
           </h1>
         </div>
 
         {/* AUTHENTICATION CARD */}
         <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl">
-          {!isSubmitted ? (
+
+          {/* STEP: EMAIL */}
+          {step === "email" && (
             <>
               <div className="text-center mb-6">
-                <h2 className="font-heading text-2xl tracking-wide text-white mb-2">ACCESS YOUR BRAIN</h2>
+                <h2 className="font-heading text-2xl tracking-wide text-white mb-2">SIGN IN</h2>
                 <p className="text-brand-sand/60 text-xs leading-relaxed">
-                  Sign in with Google or receive a secure magic link in your inbox.
+                  Sign in with Google or enter your email to continue.
                 </p>
               </div>
 
@@ -107,7 +146,7 @@ export default function LoginPage() {
               </div>
 
               {/* EMAIL FORM */}
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleEmailContinue} className="space-y-4">
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                     <Mail className="h-4 w-4 text-brand-grey" />
@@ -132,25 +171,126 @@ export default function LoginPage() {
                   disabled={isLoading || isGoogleLoading || !email}
                   className="w-full bg-brand-dark border border-white/20 text-white font-bold text-xs uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Send Magic Link"}
-                  {!isLoading && <ArrowRight className="w-4 h-4" />}
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Continue <ArrowRight className="w-4 h-4" /></>}
                 </button>
               </form>
             </>
-          ) : (
-            /* SUCCESS STATE */
+          )}
+
+          {/* STEP: PASSWORD */}
+          {step === "password" && (
+            <>
+              <button
+                onClick={() => { setStep("email"); setError(null); setPassword(""); }}
+                className="flex items-center gap-1.5 text-white/40 text-[10px] font-black uppercase tracking-widest mb-5 hover:text-white/70 transition-colors"
+              >
+                <ArrowLeft className="w-3 h-3" /> Back
+              </button>
+
+              <div className="text-center mb-6">
+                <h2 className="font-heading text-2xl tracking-wide text-white mb-2">SIGN IN</h2>
+                <p className="text-brand-sand/60 text-xs leading-relaxed truncate">{email}</p>
+              </div>
+
+              <form onSubmit={handlePasswordSignIn} className="space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Lock className="h-4 w-4 text-brand-grey" />
+                  </div>
+                  <input
+                    type="password"
+                    required
+                    autoFocus
+                    autoComplete="current-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password"
+                    className="w-full bg-white/5 text-white placeholder:text-brand-grey/50 pl-12 pr-4 py-4 rounded-xl text-sm font-bold outline-none border border-white/10 focus:border-brand-light/50 focus:bg-white/10 transition-all"
+                  />
+                </div>
+
+                {error && (
+                  <p className="text-red-400 text-xs font-bold text-center">{error}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading || !password}
+                  className="w-full bg-brand-light text-brand-dark font-bold text-xs uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 hover:opacity-90 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Sign In <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+
+              <button
+                onClick={() => handleMagicLink()}
+                disabled={isLoading}
+                className="w-full mt-4 text-white/40 text-[10px] font-black uppercase tracking-widest hover:text-white/70 transition-colors text-center"
+              >
+                Use magic link instead
+              </button>
+            </>
+          )}
+
+          {/* STEP: MAGIC LINK */}
+          {step === "magic-link" && (
+            <>
+              <button
+                onClick={() => { setStep("email"); setError(null); }}
+                className="flex items-center gap-1.5 text-white/40 text-[10px] font-black uppercase tracking-widest mb-5 hover:text-white/70 transition-colors"
+              >
+                <ArrowLeft className="w-3 h-3" /> Back
+              </button>
+
+              <div className="text-center mb-6">
+                <h2 className="font-heading text-2xl tracking-wide text-white mb-2">SIGN IN</h2>
+                <p className="text-brand-sand/60 text-xs leading-relaxed">
+                  We&apos;ll send a secure magic link to your inbox.
+                </p>
+              </div>
+
+              <form onSubmit={handleMagicLink} className="space-y-4">
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-brand-grey" />
+                  </div>
+                  <input
+                    type="email"
+                    readOnly
+                    value={email}
+                    className="w-full bg-white/5 text-white/60 pl-12 pr-4 py-4 rounded-xl text-sm font-bold outline-none border border-white/10 cursor-default"
+                  />
+                </div>
+
+                {error && (
+                  <p className="text-red-400 text-xs font-bold text-center">{error}</p>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full bg-brand-dark border border-white/20 text-white font-bold text-xs uppercase tracking-widest py-4 rounded-xl flex items-center justify-center gap-3 hover:bg-white/5 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <>Send Magic Link <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+            </>
+          )}
+
+          {/* STEP: SENT */}
+          {step === "sent" && (
             <div className="text-center py-6 space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="w-16 h-16 bg-brand-green/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-8 h-8 text-brand-green" />
               </div>
               <h2 className="font-heading text-2xl tracking-wide text-white">CHECK INBOX</h2>
               <p className="text-brand-sand/80 text-xs font-light leading-relaxed">
-                We've sent a secure login link to <br /><span className="text-white font-bold">{email}</span>.
+                We&apos;ve sent a secure login link to <br /><span className="text-white font-bold">{email}</span>.
               </p>
             </div>
           )}
-        </div>
 
+        </div>
       </div>
     </main>
   );

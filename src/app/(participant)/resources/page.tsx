@@ -157,7 +157,7 @@ export default function ResourcesPage() {
         <div className="text-center py-10 px-6">
            <p className="text-xs text-brand-grey leading-relaxed">
              Need more context? <br />
-             <span className="font-bold text-brand-light">Ask Coach Strong AI</span> about any of these concepts for a personalized breakdown.
+             <span className="font-bold text-brand-light">Ask Coach Strong</span> about any of these concepts for a personalized breakdown.
            </p>
         </div>
       </div>

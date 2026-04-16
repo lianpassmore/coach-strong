@@ -1,33 +1,35 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Loader2, CalendarDays, Info, Check, Clock } from "lucide-react";
+import { Loader2, CalendarDays, Info, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
 import HomeButton from "@/components/HomeButton";
 
 const DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 type Day = typeof DAYS[number];
-type DayType = "training" | "meal_prep" | "rest" | "busy" | null;
-type Plan = Record<Day, DayType>;
+type DayType = "training" | "meal_prep" | "rest" | "busy";
+type Plan = Record<Day, DayType[]>;
 
 const DAY_LABELS: Record<Day, string> = {
   mon: "Mon", tue: "Tue", wed: "Wed", thu: "Thu", fri: "Fri", sat: "Sat", sun: "Sun",
 };
 
-const TYPE_CONFIG: Record<string, { label: string; bg: string; text: string }> = {
-  training:  { label: "Training",  bg: "bg-brand-dark",       text: "text-white" },
-  meal_prep: { label: "Meal Prep", bg: "bg-brand-light",      text: "text-white" },
-  rest:      { label: "Rest Day",  bg: "bg-brand-green",      text: "text-brand-dark" },
-  busy:      { label: "Life/Busy", bg: "bg-brand-grey/20",    text: "text-brand-dark" },
+const TYPE_CONFIG: Record<DayType, { label: string; bg: string; text: string; activeBg: string }> = {
+  training:  { label: "Training",  bg: "bg-brand-sand",       text: "text-brand-grey",  activeBg: "bg-brand-dark text-white" },
+  meal_prep: { label: "Meal Prep", bg: "bg-brand-sand",       text: "text-brand-grey",  activeBg: "bg-brand-light text-white" },
+  rest:      { label: "Rest",      bg: "bg-brand-sand",       text: "text-brand-grey",  activeBg: "bg-brand-green text-brand-dark" },
+  busy:      { label: "Busy",      bg: "bg-brand-sand",       text: "text-brand-grey",  activeBg: "bg-brand-grey/30 text-brand-dark" },
 };
 
-const CYCLE: DayType[] = ["training", "meal_prep", "rest", "busy", null];
+const ALL_TYPES: DayType[] = ["training", "meal_prep", "rest", "busy"];
+
+const EMPTY_PLAN: Plan = { mon: [], tue: [], wed: [], thu: [], fri: [], sat: [], sun: [] };
 
 export default function PlannerPage() {
   const supabase = createClient();
   const [userId, setUserId] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState<number>(0);
-  const [plan, setPlan] = useState<Plan>({ mon: null, tue: null, wed: null, thu: null, fri: null, sat: null, sun: null });
+  const [plan, setPlan] = useState<Plan>(EMPTY_PLAN);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -42,25 +44,40 @@ export default function PlannerPage() {
       setCurrentWeek(week);
 
       const { data: planRow } = await supabase.from("weekly_plan").select("plan").eq("user_id", user.id).eq("week", week).maybeSingle();
-      if (planRow?.plan) setPlan(planRow.plan);
+      if (planRow?.plan) {
+        // Migrate legacy single-value format to arrays
+        const raw = planRow.plan as Record<string, unknown>;
+        const migrated: Plan = { ...EMPTY_PLAN };
+        for (const day of DAYS) {
+          const val = raw[day];
+          if (Array.isArray(val)) migrated[day] = val as DayType[];
+          else if (val && typeof val === "string") migrated[day] = [val as DayType];
+          else migrated[day] = [];
+        }
+        setPlan(migrated);
+      }
       setLoading(false);
     }
     load();
   }, []);
 
-  async function handleDayTap(day: Day) {
+  async function handleToggle(day: Day, type: DayType) {
     if (!userId) return;
     const current = plan[day];
-    const next = CYCLE[(CYCLE.indexOf(current) + 1) % CYCLE.length];
-    const updated = { ...plan, [day]: next };
-    
+    const updated: Plan = {
+      ...plan,
+      [day]: current.includes(type)
+        ? current.filter((t) => t !== type)
+        : [...current, type],
+    };
+
     setPlan(updated);
     setSaving(true);
-    await supabase.from("weekly_plan").upsert({ 
-      user_id: userId, 
-      week: currentWeek, 
-      plan: updated, 
-      updated_at: new Date().toISOString() 
+    await supabase.from("weekly_plan").upsert({
+      user_id: userId,
+      week: currentWeek,
+      plan: updated,
+      updated_at: new Date().toISOString(),
     }, { onConflict: "user_id,week" });
     setSaving(false);
   }
@@ -69,7 +86,7 @@ export default function PlannerPage() {
 
   return (
     <main className="min-h-screen bg-brand-sand pb-24 text-brand-dark overflow-x-hidden">
-      
+
       {/* HEADER */}
       <header className="bg-brand-dark text-white pt-12 pb-10 px-6 rounded-b-[2.5rem] shadow-xl relative">
         <div className="absolute top-0 right-0 w-48 h-48 bg-brand-mid/10 rounded-full blur-[60px]" />
@@ -96,7 +113,7 @@ export default function PlannerPage() {
                  <Info className="w-5 h-5 text-brand-green" />
               </div>
               <div>
-                 <p className="text-sm font-bold text-brand-dark">Shift, Don’t Delete</p>
+                 <p className="text-sm font-bold text-brand-dark">Shift, Don&apos;t Delete</p>
                  <p className="text-xs text-brand-grey leading-relaxed mt-1">
                    Life happens. You can move your training to a different day, but you cannot delete the intent.
                  </p>
@@ -105,7 +122,7 @@ export default function PlannerPage() {
         </section>
 
         {/* 7-DAY BATTLE PLAN */}
-        <section className="bg-white p-6 rounded-[2rem] shadow-sm border border-brand-sand">
+        <section className="bg-white p-6 rounded-4xl shadow-sm border border-brand-sand">
           <div className="flex justify-between items-center mb-6 px-2">
             <div className="flex items-center gap-2">
               <CalendarDays className="w-4 h-4 text-brand-light" />
@@ -114,51 +131,42 @@ export default function PlannerPage() {
             {saving && <Clock className="w-4 h-4 animate-pulse text-brand-light" />}
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
+          <div className="grid grid-cols-1 gap-3">
             {DAYS.map((day) => {
-              const type = plan[day];
-              const cfg = type ? TYPE_CONFIG[type] : null;
-              
+              const selected = plan[day];
               return (
-                <button
-                  key={day}
-                  onClick={() => handleDayTap(day)}
-                  className={`flex items-center justify-between p-4 rounded-2xl transition-all active:scale-[0.98] border ${
-                    cfg ? `${cfg.bg} border-transparent` : "bg-brand-sand border-brand-dark/5"
-                  }`}
-                >
-                  <span className={`text-xs font-black uppercase tracking-widest ${cfg ? cfg.text : "text-brand-grey"}`}>
+                <div key={day} className="flex items-center gap-3 px-1">
+                  <span className="text-xs font-black uppercase tracking-widest text-brand-dark w-8 shrink-0">
                     {DAY_LABELS[day]}
                   </span>
-                  
-                  <div className="flex items-center gap-2">
-                    <span className={`text-[10px] font-bold uppercase tracking-wider ${cfg ? cfg.text : "text-brand-grey/50"}`}>
-                      {cfg ? cfg.label : "Tap to set"}
-                    </span>
-                    {cfg && <Check className={`w-4 h-4 ${cfg.text}`} />}
+                  <div className="flex flex-wrap gap-1.5 flex-1">
+                    {ALL_TYPES.map((type) => {
+                      const active = selected.includes(type);
+                      const cfg = TYPE_CONFIG[type];
+                      return (
+                        <button
+                          key={type}
+                          onClick={() => handleToggle(day, type)}
+                          className={`px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all active:scale-95 border ${
+                            active
+                              ? `${cfg.activeBg} border-transparent`
+                              : `${cfg.bg} ${cfg.text} border-brand-dark/10`
+                          }`}
+                        >
+                          {cfg.label}
+                        </button>
+                      );
+                    })}
                   </div>
-                </button>
+                </div>
               );
             })}
           </div>
         </section>
 
-        {/* THE LEGEND (Now more compact) */}
-        <div className="px-4 py-2">
-          <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-3 text-center">Plan Categories</p>
-          <div className="flex flex-wrap justify-center gap-2">
-            {Object.entries(TYPE_CONFIG).map(([key, cfg]) => (
-              <div key={key} className="flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-brand-sand shadow-sm">
-                <div className={`w-2 h-2 rounded-full ${cfg.bg}`} />
-                <span className="text-[9px] font-bold text-brand-dark uppercase">{cfg.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
         {/* AI INTEGRATION NOTE */}
         <p className="text-[10px] text-brand-grey font-medium text-center px-8 leading-relaxed italic">
-          Coach Strong AI adapts her check-ins based on your plan. If it's a rest day, she knows.
+          Coach Strong adapts her check-ins based on your plan. If it&apos;s a rest day, she knows.
         </p>
 
       </div>

@@ -270,7 +270,7 @@ function VoiceSessionContent() {
       {isIdle && (
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-8 text-center">
           <h2 className="font-heading text-4xl tracking-widest mb-4 uppercase">
-            {isDiscovery ? "Initialization" : "Connect Brain"}
+            {isDiscovery ? "Initialization" : "Connect with Coach Strong"}
           </h2>
           <p className="text-white/60 text-sm text-center mb-10 max-w-xs">
             How would you like to connect with Coach Strong today?
@@ -297,7 +297,7 @@ function VoiceSessionContent() {
               {isConnecting ? (
                 <Loader2 className="w-10 h-10 text-brand-light animate-spin" />
               ) : (
-                <Image src="/Logo_square_OG.png" alt="Brain" width={60} height={60} className={`brightness-0 invert transition-all duration-300 ${isSpeaking ? "scale-110" : "scale-100 opacity-70"}`} />
+                <Image src="/Logo_square_OG.png" alt="Coach Strong" width={60} height={60} className={`brightness-0 invert transition-all duration-300 ${isSpeaking ? "scale-110" : "scale-100 opacity-70"}`} />
               )}
             </div>
           </div>
