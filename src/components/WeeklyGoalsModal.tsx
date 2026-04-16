@@ -53,7 +53,7 @@ export default function WeeklyGoalsModal({ userId, week, initialMinGoal, initial
             <div className="space-y-4">
               <div>
                 <label className="text-[10px] font-black text-brand-grey uppercase tracking-wider block mb-2">
-                  Minimum (non-negotiable)
+                  Minimum aim
                 </label>
                 <textarea
                   value={minGoal}
@@ -65,7 +65,7 @@ export default function WeeklyGoalsModal({ userId, week, initialMinGoal, initial
               </div>
               <div>
                 <label className="text-[10px] font-black text-brand-grey uppercase tracking-wider block mb-2">
-                  Stretch goal (if everything goes to plan)
+                  Optimal aim
                 </label>
                 <textarea
                   value={maxGoal}

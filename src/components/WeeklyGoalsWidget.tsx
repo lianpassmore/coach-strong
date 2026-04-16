@@ -48,13 +48,13 @@ export default function WeeklyGoalsWidget({ userId, week, initialMinGoal, initia
           <div className="space-y-3">
             {minGoal && (
               <div>
-                <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-1">Minimum</p>
+                <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-1">Minimum Aim</p>
                 <p className="text-sm font-bold text-brand-dark">{minGoal}</p>
               </div>
             )}
             {maxGoal && (
               <div className={minGoal ? "pt-2 border-t border-brand-sand" : ""}>
-                <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-1">Stretch</p>
+                <p className="text-[10px] font-black text-brand-grey uppercase tracking-wider mb-1">Optimal Aim</p>
                 <p className="text-sm text-brand-dark">{maxGoal}</p>
               </div>
             )}

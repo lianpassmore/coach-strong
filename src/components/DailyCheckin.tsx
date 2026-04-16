@@ -32,7 +32,7 @@ export default function DailyCheckin({
     if (initialEnergy) return 2;
     return 1;
   });
-  const [expanded, setExpanded] = useState(!initialEnergy);
+  const [expanded, setExpanded] = useState(false);
 
   const [wentWell, setWentWell] = useState(initialWentWell ?? "");
   const [energy, setEnergy] = useState<number | null>(initialEnergy);

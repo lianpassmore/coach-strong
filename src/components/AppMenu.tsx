@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import {
   Menu, X, User, MessageCircle, Mail, Phone, BookOpen,
   TrendingUp, Settings, LogOut, LayoutDashboard,
-  CalendarDays, PenLine, Library, ChevronRight, Zap, Loader2
+  CalendarDays, PenLine, ChevronRight, Zap, Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -91,19 +91,19 @@ export default function AppMenu() {
           <div className={`absolute top-0 right-0 h-full w-[85%] max-w-sm bg-white shadow-2xl transition-transform duration-400 ease-out flex flex-col ${isMenuOpen ? "translate-x-0" : "translate-x-full"}`}>
             
             {/* Header */}
-            <div className="px-6 pt-12 pb-6 flex justify-between items-center">
+            <div className="px-6 pt-8 pb-3 flex justify-between items-center">
               <Image src="/Logo_landscape_OG.png" alt="Inspire Change" width={110} height={34} />
               <button onClick={closeMenu} className="p-2 bg-brand-sand rounded-full text-brand-grey hover:text-brand-dark transition-colors">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="flex-1 flex flex-col overflow-y-auto px-6 pb-8">
+            <div className="flex-1 flex flex-col overflow-y-auto px-6 pb-4">
               
               {/* Profile Card */}
-              <div className="bg-brand-sand/50 rounded-3xl p-4 flex items-center gap-4 mb-8">
+              <div className="bg-brand-sand/50 rounded-3xl p-3 flex items-center gap-3 mb-4">
                 <div className="relative shrink-0">
-                  <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center border border-brand-light shadow-sm overflow-hidden">
+                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center border border-brand-light shadow-sm overflow-hidden">
                     {avatarUrl ? (
                       <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
                     ) : (
@@ -120,8 +120,8 @@ export default function AppMenu() {
               </div>
 
               {/* SECTION 1: THE DAILY PATH */}
-              <div className="mb-8">
-                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-3 px-2">The Daily Path</p>
+              <div className="mb-4">
+                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-2 px-2">The Daily Path</p>
                 <div className="space-y-1">
                   <MenuLink onClick={closeMenu} href="/dashboard" icon={<LayoutDashboard />} label="My Dashboard" />
                   <MenuLink onClick={closeMenu} href="/planner" icon={<CalendarDays />} label="Week Planner" />
@@ -131,7 +131,7 @@ export default function AppMenu() {
                   <button
                     onClick={toggleDisruptionMode}
                     disabled={togglingDisruption}
-                    className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl transition-all ${
+                    className={`w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl transition-all ${
                       disruptionMode ? "bg-yellow-50 text-yellow-700" : "text-brand-dark hover:bg-brand-sand"
                     }`}
                   >
@@ -151,22 +151,21 @@ export default function AppMenu() {
               </div>
 
               {/* SECTION 2: THE VAULT */}
-              <div className="mb-8">
-                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-3 px-2">Growth Vault</p>
+              <div className="mb-4">
+                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-2 px-2">Growth Vault</p>
                 <div className="space-y-1">
                   <MenuLink onClick={closeMenu} href="/workbook" icon={<BookOpen />} label="Digital Workbook" />
                   <MenuLink onClick={closeMenu} href="/journey" icon={<TrendingUp />} label="My Progress" />
-                  <MenuLink onClick={closeMenu} href="/resources" icon={<Library />} label="Reference Cards" />
                 </div>
               </div>
 
               {/* SECTION 3: SUPPORT */}
               <div>
-                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-3 px-2">Support</p>
+                <p className="text-[10px] font-black text-brand-grey uppercase tracking-[0.2em] mb-2 px-2">Support</p>
                 <div className="space-y-1">
                   <button
                     onClick={() => { closeMenu(); setIsContactOpen(true); }}
-                    className="w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-brand-dark hover:bg-brand-sand transition-all font-bold text-sm"
+                    className="w-full flex items-center gap-4 px-4 py-2.5 rounded-2xl text-brand-dark hover:bg-brand-sand transition-all font-bold text-sm"
                   >
                     <MessageCircle className="w-5 h-5 text-brand-light shrink-0" />
                     Contact Eske
@@ -183,7 +182,7 @@ export default function AppMenu() {
             </div>
 
             {/* Footer / Logout */}
-            <div className="p-6 border-t border-brand-sand flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-brand-sand flex items-center justify-between">
               <button
                 onClick={handleLogout}
                 className="flex items-center gap-2 text-red-500 font-bold text-sm hover:opacity-70 transition-opacity"
@@ -234,7 +233,7 @@ function MenuLink({ href, icon, label, onClick }: { href: string; icon: React.Re
     <Link 
       href={href} 
       onClick={onClick}
-      className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-brand-dark hover:bg-brand-sand transition-all group"
+      className="w-full flex items-center justify-between px-4 py-2.5 rounded-2xl text-brand-dark hover:bg-brand-sand transition-all group"
     >
       <div className="flex items-center gap-4">
         <span className="text-brand-light group-hover:scale-110 transition-transform">

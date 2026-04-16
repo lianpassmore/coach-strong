@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { 
-  Bell, Shield, ChevronRight, Lock, Loader2, X, Eye, 
-  EyeOff, CheckCircle, Moon, CalendarDays, LogOut, Info 
+import {
+  Bell, Shield, ChevronRight, Lock, Loader2, X, Eye,
+  EyeOff, CheckCircle, Moon, CalendarDays, LogOut, Info,
+  Sun, BookOpen, Heart, Sparkles
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
@@ -17,8 +18,12 @@ export default function SettingsPage() {
   // State for preference toggles
   const [prefs, setPrefs] = useState({
     notify_push: true,
+    show_week_planner: true,
     cycle_tracking_enabled: false,
-    show_week_planner: true
+    module_morning_intention: false,
+    module_evening_prep: false,
+    module_weekly_reflection: false,
+    module_journal: false,
   });
 
   // Load preferences from Supabase on mount
@@ -28,7 +33,7 @@ export default function SettingsPage() {
       if (!user) return;
       const { data } = await supabase
         .from("profiles")
-        .select("notify_push, cycle_tracking_enabled, show_week_planner")
+        .select("notify_push, show_week_planner, cycle_tracking_enabled, module_morning_intention, module_evening_prep, module_weekly_reflection, module_journal")
         .eq("id", user.id)
         .single();
       if (data) setPrefs(data);
@@ -91,24 +96,56 @@ export default function SettingsPage() {
           </section>
         </div>
 
-        {/* 3. INTERFACE SECTION (Dashboard Widgets) */}
+        {/* 3. INTERFACE SECTION (Dashboard Modules) */}
         <div className="space-y-2">
-          <p className="text-[10px] font-black text-brand-grey uppercase tracking-widest px-2">Dashboard Personalization</p>
+          <p className="text-[10px] font-black text-brand-grey uppercase tracking-widest px-2">Dashboard Modules</p>
           <section className="bg-white rounded-[2rem] shadow-sm border border-brand-sand overflow-hidden">
-             <SettingToggle 
-                icon={<CalendarDays />} 
-                label="Weekly Plan Strip" 
-                desc="Visual training schedule" 
-                enabled={prefs.show_week_planner} 
-                onToggle={() => togglePref('show_week_planner')} 
+             <SettingToggle
+                icon={<Sun />}
+                label="Daily Intention"
+                desc="Set a morning focus each day"
+                enabled={prefs.module_morning_intention}
+                onToggle={() => togglePref('module_morning_intention')}
              />
              <div className="h-px bg-brand-sand mx-6" />
-             <SettingToggle 
-                icon={<Moon />} 
-                label="Cycle Tracker" 
-                desc="Integrate cycle health data" 
-                enabled={prefs.cycle_tracking_enabled} 
-                onToggle={() => togglePref('cycle_tracking_enabled')} 
+             <SettingToggle
+                icon={<Moon />}
+                label="Evening Prep"
+                desc="End-of-day checklist for tomorrow"
+                enabled={prefs.module_evening_prep}
+                onToggle={() => togglePref('module_evening_prep')}
+             />
+             <div className="h-px bg-brand-sand mx-6" />
+             <SettingToggle
+                icon={<CalendarDays />}
+                label="Weekly Planner"
+                desc="Visual 7-day training schedule"
+                enabled={prefs.show_week_planner}
+                onToggle={() => togglePref('show_week_planner')}
+             />
+             <div className="h-px bg-brand-sand mx-6" />
+             <SettingToggle
+                icon={<Heart />}
+                label="Cycle Tracker"
+                desc="Sync coaching with your cycle"
+                enabled={prefs.cycle_tracking_enabled}
+                onToggle={() => togglePref('cycle_tracking_enabled')}
+             />
+             <div className="h-px bg-brand-sand mx-6" />
+             <SettingToggle
+                icon={<BookOpen />}
+                label="Journal Prompts"
+                desc="Capture insights & reflections"
+                enabled={prefs.module_journal}
+                onToggle={() => togglePref('module_journal')}
+             />
+             <div className="h-px bg-brand-sand mx-6" />
+             <SettingToggle
+                icon={<Sparkles />}
+                label="Weekly Reflection"
+                desc="Friday end-of-week review prompt"
+                enabled={prefs.module_weekly_reflection}
+                onToggle={() => togglePref('module_weekly_reflection')}
              />
           </section>
         </div>
