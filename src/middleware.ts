@@ -36,7 +36,7 @@ export async function middleware(request: NextRequest) {
   const user = session?.user
 
   // 3. Logic: If NOT logged in and trying to access a private page
-  if (!user && !PUBLIC_ROUTES.includes(pathname)) {
+  if (!user && !PUBLIC_ROUTES.includes(pathname) && !GATE_EXEMPT.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
