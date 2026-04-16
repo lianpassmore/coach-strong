@@ -39,7 +39,7 @@ function DiscoveryContent() {
           </div>
         </div>
 
-        <h1 className="font-heading text-4xl tracking-widest mb-4 leading-none">MEET YOUR<br />DIGITAL BRAIN</h1>
+        <h1 className="font-heading text-4xl tracking-widest mb-4 leading-none">MEET YOUR<br />COACH STRONG</h1>
         <p className="text-white/60 text-sm leading-relaxed mb-10 px-2">
           Coach Strong has processed your data. She is now ready for your <span className="text-brand-light font-bold">Discovery Interview</span> to finalize your 8-week roadmap.
         </p>

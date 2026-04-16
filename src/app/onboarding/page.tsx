@@ -2,7 +2,7 @@
 import { useState } from "react";
 import {
   ArrowRight, ArrowLeft, Target, Sparkles, Shield,
-  Check, Loader2, Dumbbell, Apple, Heart, Moon, User,
+  Check, Loader2, Dumbbell, Heart, Moon, User,
   Sun, BookOpen, CalendarDays
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -17,7 +17,6 @@ const MODULES = [
   { key: "show_week_planner",         Icon: CalendarDays, label: "Weekly Planner",      desc: "Visual 7-day training schedule" },
   { key: "cycle_tracking_enabled",    Icon: Heart,        label: "Cycle Tracker",       desc: "Sync coaching with your cycle" },
   { key: "module_journal",            Icon: BookOpen,     label: "Journal Prompts",     desc: "Capture insights & reflections" },
-  { key: "module_afternoon_nudge",    Icon: Apple,        label: "Afternoon Nudge",     desc: "Reminder to eat between meals" },
   { key: "module_weekly_reflection",  Icon: Sparkles,     label: "Weekly Reflection",   desc: "Friday end-of-week review prompt" },
 ] as const;
 
@@ -30,7 +29,6 @@ const DEFAULT_MODULES: ModuleState = {
   show_week_planner: false,
   cycle_tracking_enabled: false,
   module_journal: false,
-  module_afternoon_nudge: false,
   module_weekly_reflection: false,
 };
 
