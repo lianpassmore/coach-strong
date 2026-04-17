@@ -258,11 +258,22 @@ export async function GET(request: Request) {
 
     // Generate signed URL so the client can connect as a private agent
     // (required for dynamic variables to be accepted by ElevenLabs)
-    const elevenLabsClient = new ElevenLabsClient({ apiKey });
-    const signedUrlResponse = await elevenLabsClient.conversationalAi.conversations.getSignedUrl({ agentId });
+    const signedUrlRes = await fetch(
+      `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${agentId}`,
+      { headers: { 'xi-api-key': apiKey } }
+    );
+    if (!signedUrlRes.ok) {
+      const errBody = await signedUrlRes.text();
+      console.error(`ElevenLabs signed URL error ${signedUrlRes.status}:`, errBody);
+      return NextResponse.json(
+        { error: 'Failed to get signed URL from ElevenLabs', detail: errBody },
+        { status: 502 }
+      );
+    }
+    const { signed_url: signedUrl } = await signedUrlRes.json();
 
     return NextResponse.json({
-      signedUrl: signedUrlResponse.signedUrl,
+      signedUrl,
       dynamicVariables,
       conversationDbId,
       sessionNumber,

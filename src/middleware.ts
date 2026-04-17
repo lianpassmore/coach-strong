@@ -49,6 +49,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // 5. Logic: If LOGGED IN but onboarding not complete, redirect to /onboarding
+  if (user && !GATE_EXEMPT.some(p => pathname.startsWith(p))) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('onboarding_completed')
+      .eq('id', user.id)
+      .single()
+
+    if (profile && !profile.onboarding_completed) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/onboarding'
+      return NextResponse.redirect(url)
+    }
+  }
+
   return response
 }
 
