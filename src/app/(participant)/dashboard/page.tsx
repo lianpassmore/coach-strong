@@ -66,6 +66,7 @@ type Profile = {
   cohort: string | null;
   voice_minutes_cap_per_week: number;
   discovery_completed: boolean | null;
+  is_admin: boolean;
 };
 
 type CheckinData = {
@@ -142,23 +143,30 @@ export default function Dashboard() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, preferred_name, long_term_goal, goal, motivation_word, current_week, program_start_date, cohort, voice_minutes_cap_per_week, discovery_completed")
+        .select("full_name, preferred_name, long_term_goal, goal, motivation_word, current_week, program_start_date, cohort, voice_minutes_cap_per_week, discovery_completed, is_admin")
         .eq("id", user.id)
         .single();
 
-      // Auto-advance current_week based on days elapsed since program start
-      const computedWeek = computeCurrentWeek(data?.program_start_date);
-      if (data && computedWeek !== data.current_week) {
-        await supabase
-          .from("profiles")
-          .update({ current_week: computedWeek, updated_at: new Date().toISOString() })
-          .eq("id", user.id);
-        data.current_week = computedWeek;
+      // Auto-advance current_week based on days elapsed since program start (skip for admins)
+      if (data && !data.is_admin) {
+        const computedWeek = computeCurrentWeek(data.program_start_date);
+        if (computedWeek !== data.current_week) {
+          await supabase
+            .from("profiles")
+            .update({ current_week: computedWeek, updated_at: new Date().toISOString() })
+            .eq("id", user.id);
+          data.current_week = computedWeek;
+        }
+      }
+
+      // Admins always see the full 8 weeks
+      if (data?.is_admin) {
+        data.current_week = 8;
       }
 
       const profileData = data ?? {
         full_name: null, preferred_name: null, long_term_goal: null, goal: null,
-        motivation_word: null, current_week: 0, program_start_date: null, cohort: null, voice_minutes_cap_per_week: 120, discovery_completed: null,
+        motivation_word: null, current_week: 0, program_start_date: null, cohort: null, voice_minutes_cap_per_week: 120, discovery_completed: null, is_admin: false,
       };
       setProfile(profileData);
 

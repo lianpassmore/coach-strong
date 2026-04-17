@@ -43,7 +43,8 @@ export default function JourneyPage() {
       setEditWord(prof?.motivation_word || "");
 
       // Process Energy Data (Simplified for the chart)
-      const weeklyData = WEEK_THEMES.slice(0, prof?.current_week || 1).map(w => {
+      const effectiveWeek = prof?.is_admin ? 8 : (prof?.current_week || 1);
+      const weeklyData = WEEK_THEMES.slice(0, effectiveWeek).map(w => {
         const weekCheckins = checkins?.filter(c => c.week === w.week) || [];
         const avg = weekCheckins.length ? weekCheckins.reduce((acc, curr) => acc + (curr.energy_level || 0), 0) / weekCheckins.length : 0;
         return { ...w, avg, completed: weekCheckins.some(c => c.assignment_completed) };

@@ -36,8 +36,9 @@ export default function Workbook() {
       if (!user) return;
 
       const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-      setCurrentWeek(profile?.current_week || 1);
-      setExpandedWeek(profile?.current_week || 1);
+      const effectiveWeek = profile?.is_admin ? 8 : (profile?.current_week || 1);
+      setCurrentWeek(effectiveWeek);
+      setExpandedWeek(effectiveWeek);
 
       if (profile?.cohort) {
         const { data: cohort } = await supabase.from("cohorts").select("*").eq("name", profile.cohort).single();

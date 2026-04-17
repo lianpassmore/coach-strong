@@ -32,11 +32,11 @@ export default function ProgressPage() {
       if (!user) return;
 
       const [{ data: profile }, { data: checkins }] = await Promise.all([
-        supabase.from("profiles").select("current_week").eq("id", user.id).single(),
+        supabase.from("profiles").select("current_week, is_admin").eq("id", user.id).single(),
         supabase.from("check_ins").select("week, energy_level, assignment_completed").eq("user_id", user.id),
       ]);
 
-      const week = profile?.current_week ?? 1;
+      const week = profile?.is_admin ? 8 : (profile?.current_week ?? 1);
       setCurrentWeek(week);
 
       // Process Energy Stats
