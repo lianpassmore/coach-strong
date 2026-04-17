@@ -245,7 +245,7 @@ export async function GET(request: Request) {
         .eq('status', 'completed')
         .order('ended_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (lastConvo?.ended_at) {
         const lastDate = new Date(lastConvo.ended_at);
