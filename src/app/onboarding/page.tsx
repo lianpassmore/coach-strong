@@ -39,7 +39,9 @@ export default function OnboardingPage() {
   const supabase = createClient();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
-  const [hasConsented, setHasConsented] = useState(false);
+  const [consentAI, setConsentAI] = useState(false);
+  const [consentData, setConsentData] = useState(false);
+  const [consentCoach, setConsentCoach] = useState(false);
   const [modules, setModules] = useState<ModuleState>(DEFAULT_MODULES);
 
   const [form, setForm] = useState({
@@ -66,6 +68,7 @@ export default function OnboardingPage() {
         ...(form.goal         && { goal:            form.goal }),
         ...(form.motivationWord && { motivation_word: form.motivationWord }),
         ...modules,
+        onboarding_completed: true,
       }).eq("id", user.id);
     }
     router.push("/discovery");
@@ -75,7 +78,7 @@ export default function OnboardingPage() {
   const prevStep = () => setStep(Math.max(1, step - 1));
 
   const isFinalStep = step === TOTAL_STEPS;
-  const isNextDisabled = isSaving || (step === 6 && !hasConsented);
+  const isNextDisabled = isSaving || (step === 6 && !(consentAI && consentData && consentCoach));
 
   return (
     <main className="min-h-screen bg-brand-sand pb-24 text-brand-dark overflow-x-hidden flex flex-col">
@@ -215,18 +218,25 @@ export default function OnboardingPage() {
                 <Shield className="w-6 h-6 text-brand-green" />
               </div>
               <h2 className="font-heading text-3xl tracking-wide mb-2">TRUST & PRIVACY</h2>
-              <div className="space-y-4 mb-8">
-                 <p className="text-xs text-brand-grey leading-relaxed">Your data is stored in secure Asia-Pacific cloud vaults.</p>
-                 <button
-                  type="button"
-                  onClick={() => setHasConsented(!hasConsented)}
-                  className={`w-full p-5 rounded-2xl border-2 flex items-center gap-4 transition-all ${hasConsented ? 'border-brand-green bg-brand-green/5' : 'border-brand-sand'}`}
-                 >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${hasConsented ? 'bg-brand-green text-white' : 'border-2 border-brand-sand'}`}>
-                      {hasConsented && <Check className="w-4 h-4" />}
+              <div className="space-y-3 mb-8">
+                <p className="text-xs text-brand-grey leading-relaxed">Your data is stored in secure Asia-Pacific cloud vaults. Please read and confirm each item below.</p>
+                {([
+                  { state: consentAI,    set: setConsentAI,    text: "I consent to receiving AI-powered coaching through Coach Strong." },
+                  { state: consentData,  set: setConsentData,  text: "I consent to my information being used to personalise and improve my coaching experience within this app." },
+                  { state: consentCoach, set: setConsentCoach, text: "I consent to my coach accessing individual insights from my sessions to support me throughout the programme." },
+                ] as const).map(({ state, set, text }, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => set(!state)}
+                    className={`w-full p-4 rounded-2xl border-2 flex items-start gap-4 transition-all text-left ${state ? 'border-brand-green bg-brand-green/5' : 'border-brand-sand'}`}
+                  >
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${state ? 'bg-brand-green text-white' : 'border-2 border-brand-sand'}`}>
+                      {state && <Check className="w-3 h-3" />}
                     </div>
-                    <span className="text-xs font-bold text-left">I consent to AI-powered coaching.</span>
-                 </button>
+                    <span className="text-xs font-bold leading-relaxed">{text}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}

@@ -256,7 +256,13 @@ export async function GET(request: Request) {
       }
     }
 
+    // Generate signed URL so the client can connect as a private agent
+    // (required for dynamic variables to be accepted by ElevenLabs)
+    const elevenLabsClient = new ElevenLabsClient({ apiKey });
+    const signedUrlResponse = await elevenLabsClient.conversationalAi.conversations.getSignedUrl({ agentId });
+
     return NextResponse.json({
+      signedUrl: signedUrlResponse.signedUrl,
       dynamicVariables,
       conversationDbId,
       sessionNumber,

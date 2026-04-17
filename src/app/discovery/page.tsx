@@ -68,7 +68,13 @@ function DiscoveryContent() {
           Begin Discovery
           <ArrowRight className="w-5 h-5" />
         </button>
-        <p className="mt-6 text-[10px] text-white/30 uppercase tracking-[0.2em]">Est. Duration: 10–12 Minutes</p>
+        <p className="mt-4 text-[10px] text-white/30 uppercase tracking-[0.2em]">Est. Duration: 10–12 Minutes</p>
+        <button
+          onClick={() => router.push("/dashboard")}
+          className="mt-4 text-[10px] font-bold text-white/30 uppercase tracking-widest hover:text-white/60 transition-colors"
+        >
+          Skip for now — I&apos;ll do this on my first session
+        </button>
       </div>
     </main>
   );

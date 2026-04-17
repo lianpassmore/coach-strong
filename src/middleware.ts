@@ -49,28 +49,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 5. Logic: Onboarding & Discovery Gates
-  // Only check this if the user is logged in and not on a "gate exempt" page
-  if (user && !GATE_EXEMPT.some((p) => pathname.startsWith(p))) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('onboarding_completed, discovery_completed, is_admin')
-      .eq('id', user.id)
-      .single()
-
-    // Coaches/Admins are allowed to bypass the gates
-    if (!profile?.is_admin) {
-      // Force Onboarding
-      if (!profile?.onboarding_completed) {
-        return NextResponse.redirect(new URL('/onboarding', request.url))
-      }
-      // Force Discovery Voice Interview
-      if (!profile?.discovery_completed) {
-        return NextResponse.redirect(new URL('/discovery', request.url))
-      }
-    }
-  }
-
   return response
 }
 

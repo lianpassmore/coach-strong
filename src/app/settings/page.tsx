@@ -9,12 +9,12 @@ import { createClient } from "@/lib/supabase/client";
 import AppMenu from "@/components/AppMenu";
 import HomeButton from "@/components/HomeButton";
 
-const supabase = createClient();
-
 export default function SettingsPage() {
+  const supabase = createClient();
+  const [userId, setUserId] = useState<string | null>(null);
   const [loadingPrefs, setLoadingPrefs] = useState(true);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  
+
   // State for preference toggles
   const [prefs, setPrefs] = useState({
     notify_push: true,
@@ -31,6 +31,7 @@ export default function SettingsPage() {
     async function load() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+      setUserId(user.id);
       const { data } = await supabase
         .from("profiles")
         .select("notify_push, show_week_planner, cycle_tracking_enabled, module_morning_intention, module_evening_prep, module_weekly_reflection, module_journal")
@@ -44,12 +45,10 @@ export default function SettingsPage() {
 
   // Generic toggle handler
   async function togglePref(field: keyof typeof prefs) {
+    if (!userId) return;
     const nextValue = !prefs[field];
     setPrefs(prev => ({ ...prev, [field]: nextValue }));
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      await supabase.from("profiles").update({ [field]: nextValue }).eq("id", user.id);
-    }
+    await supabase.from("profiles").update({ [field]: nextValue }).eq("id", userId);
   }
 
   if (loadingPrefs) {
@@ -183,7 +182,7 @@ export default function SettingsPage() {
       </div>
 
       {/* MODAL: PASSWORD RESET */}
-      {showPasswordModal && <PasswordModal onClose={() => setShowPasswordModal(false)} />}
+      {showPasswordModal && <PasswordModal supabase={supabase} onClose={() => setShowPasswordModal(false)} />}
     </main>
   );
 }
@@ -228,7 +227,7 @@ function SettingLink({ icon, label, onClick }: any) {
   );
 }
 
-function PasswordModal({ onClose }: { onClose: () => void }) {
+function PasswordModal({ supabase, onClose }: { supabase: ReturnType<typeof createClient>; onClose: () => void }) {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPass, setShowPass] = useState(false);

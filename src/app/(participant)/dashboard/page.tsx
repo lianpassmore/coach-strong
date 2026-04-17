@@ -65,6 +65,7 @@ type Profile = {
   program_start_date: string | null;
   cohort: string | null;
   voice_minutes_cap_per_week: number;
+  discovery_completed: boolean | null;
 };
 
 type CheckinData = {
@@ -141,7 +142,7 @@ export default function Dashboard() {
 
       const { data } = await supabase
         .from("profiles")
-        .select("full_name, preferred_name, long_term_goal, goal, motivation_word, current_week, program_start_date, cohort, voice_minutes_cap_per_week")
+        .select("full_name, preferred_name, long_term_goal, goal, motivation_word, current_week, program_start_date, cohort, voice_minutes_cap_per_week, discovery_completed")
         .eq("id", user.id)
         .single();
 
@@ -157,7 +158,7 @@ export default function Dashboard() {
 
       const profileData = data ?? {
         full_name: null, preferred_name: null, long_term_goal: null, goal: null,
-        motivation_word: null, current_week: 0, program_start_date: null, cohort: null, voice_minutes_cap_per_week: 120,
+        motivation_word: null, current_week: 0, program_start_date: null, cohort: null, voice_minutes_cap_per_week: 120, discovery_completed: null,
       };
       setProfile(profileData);
 
@@ -261,6 +262,7 @@ export default function Dashboard() {
   const displayName = profile?.preferred_name || profile?.full_name?.split(" ")[0] || userEmail?.split("@")[0] || "there";
   const currentWeek = profile?.current_week ?? 0;
   const isProgramStarted = currentWeek > 0;
+  const sessionHref = profile?.discovery_completed ? "/voice-session" : "/voice-session?mode=discovery";
   const weekTheme = isProgramStarted ? (WEEK_THEMES[currentWeek - 1] ?? "Foundation & Identity") : null;
 
   if (loading) {
@@ -408,7 +410,7 @@ export default function Dashboard() {
                       <div className="absolute -right-10 -top-10 w-48 h-48 bg-brand-mid/50 rounded-full blur-[50px]"></div>
                       <div className="absolute -left-10 -bottom-10 w-48 h-48 bg-brand-light/30 rounded-full blur-[50px]"></div>
                       <h2 className="font-logo text-xl font-bold tracking-widest mb-6 z-10">COACH STRONG</h2>
-                      <Link href="/voice-session" className="relative group z-10 mb-4">
+                      <Link href={sessionHref} className="relative group z-10 mb-4">
                         <div className="absolute inset-0 bg-brand-light rounded-full opacity-40 group-hover:animate-ping"></div>
                         <div className="absolute -inset-4 bg-brand-light/20 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity"></div>
                         <div className="relative w-20 h-20 bg-linear-to-tr from-brand-light to-[#0de0ff] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(5,171,196,0.4)] transition-transform active:scale-95">
@@ -466,7 +468,7 @@ export default function Dashboard() {
 
             <h2 className="font-logo text-xl font-bold tracking-widest mb-6 z-10">COACH STRONG</h2>
 
-            <Link href="/voice-session" className="relative group z-10 mb-4">
+            <Link href={sessionHref} className="relative group z-10 mb-4">
               <div className="absolute inset-0 bg-brand-light rounded-full opacity-40 group-hover:animate-ping"></div>
               <div className="relative w-20 h-20 bg-linear-to-tr from-brand-light to-[#0de0ff] rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(5,171,196,0.4)] transition-transform active:scale-95">
                 <Mic className="w-8 h-8 text-white drop-shadow-md" />

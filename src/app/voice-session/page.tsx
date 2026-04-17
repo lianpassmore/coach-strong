@@ -165,8 +165,7 @@ function VoiceSessionContent() {
 
       // FIXED: Added required connectionType property
       await conversation.startSession({
-        agentId: process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID!,
-        connectionType: "websocket",
+        signedUrl: data.signedUrl,
         dynamicVariables: {
           ...data.dynamicVariables,
           _is_discovery_: isDiscovery ? "true" : "false",
